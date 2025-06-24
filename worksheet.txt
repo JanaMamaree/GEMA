@@ -1,0 +1,9 @@
+to run the frontend side:
+
+open 3 terminals on windows power shell: (inside GEMA and activate virtual env):
+
+first one: celery -A GEMA worker -l info
+second one: celery -A GEMA beat -l info
+third one: daphne -b 0.0.0.0 -p 8000 GEMA.asgi:application
+
+it's better to keep it in this order
