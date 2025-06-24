@@ -1,0 +1,22 @@
+1. open power shell
+2. ssh Jana@ip with pass: 1234
+3. mkdir -p ~/deep_learning_camera
+cd ~/deep_learning_camera
+4. source venv/bin/activate
+5. so now we are in: (venv) Jana@raspberrypi:~/deep_learning_camera $ 
+6. to check gps: sudo minicom -b 115200 -o -D /dev/ttyUSB2
+	with AT
+	to turn on gps: AT+CGNSPWR=1
+			AT+CGNSPWR=0
+	to get gps data: AT+CGNSINF
+7. to run deep learning model with camera: python camera_deeplearning.py
+		--=)without loading everytime: python camera_deeplearning1.py
+8. python final_code3.py (without test camera)
+9. python test_camera.py
+
+(make sure to always check the ip of your local host in the code)
+
+
+
+
+

@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Profile</title>
+    <link rel="icon" type="image/png" href="/static/myapp/GEMA_logo.png">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+    <style>
+        body {
+            display: flex;
+            min-height: 100vh;
+            background-color: #f8f9fa;
+        }
+        .sidebar {
+            width: 250px;
+            background-color: #343a40;
+            padding-top: 2rem;
+            color: white;
+        }
+        .sidebar a {
+            color: white;
+            padding: 1rem;
+            display: block;
+            text-decoration: none;
+        }
+        .sidebar a:hover {
+            background-color: #495057;
+        }
+        .content {
+            flex: 1;
+            padding: 2rem;
+        }
+        .profile-card {
+            max-width: 600px;
+            margin: 40px auto;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+            padding: 2rem 2.5rem;
+        }
+        .profile-avatar {
+            width: 90px;
+            height: 90px;
+            object-fit: cover;
+            border-radius: 50%;
+            margin-bottom: 1rem;
+        }
+        .profile-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .profile-row:last-child {
+            border-bottom: none;
+        }
+        .profile-label {
+            font-weight: 500;
+            color: #555;
+            min-width: 120px;
+        }
+        .profile-value {
+            flex: 1;
+            color: #222;
+        }
+        .edit-btn {
+            background: none;
+            border: none;
+            color: #007bff;
+            font-size: 1.1em;
+            cursor: pointer;
+        }
+        .edit-btn:focus {
+            outline: none;
+        }
+        .profile-actions {
+            margin-top: 2rem;
+        }
+        .profile-row input, .profile-row select {
+            width: 100%;
+            max-width: 300px;
+        }
+    </style>
+    <script>
+        function enableEdit(field) {
+            const fields = ['username', 'email', 'phone', 'password', 'notifications', 'language'];
+            fields.forEach(f => {
+                document.getElementById(f + '-edit').style.display = 'none';
+                document.getElementById(f + '-display').style.display = 'block';
+            });
+            document.getElementById(field + '-display').style.display = 'none';
+            document.getElementById(field + '-edit').style.display = 'block';
+        }
+        function cancelEdit(field) {
+            document.getElementById(field + '-edit').style.display = 'none';
+            document.getElementById(field + '-display').style.display = 'block';
+        }
+    </script>
+</head>
+<body>
+<div class="sidebar">
+    <div class="text-center mb-3">
+        <img src="/static/myapp/GEMA_logo.png" alt="GEMA Logo" style="max-width:120px;max-height:120px; margin-bottom:10px;">
+    </div>
+    <a href="/map/">Map</a>
+    <a href="/devices/">Devices</a>
+    <a href="/history/">History</a>
+    <a href="/profile/">Profile</a>
+    <button type="button" class="btn btn-outline-secondary w-100 mt-2" data-bs-toggle="modal" data-bs-target="#logoutModal">
+        Logout
+    </button>
+    <hr>
+    <div class="text-center" style="margin-top:16px;">
+        <span style="font-size:0.8em; color:#bbb; vertical-align:middle; margin-right:6px;">powered by</span>
+        <img src="/static/myapp/SOMOS_logo.png" alt="SOMOS Logo" style="max-width:80px; vertical-align:middle; opacity:0.7;">
+    </div>
+</div>
+
+<!-- Logout Modal -->
+    <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form method="post" action="{% url 'logout' %}">
+                    {% csrf_token %}
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="logoutModalLabel">Confirm Logout</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        Are you sure you want to log out?
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-danger">Logout</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+<div class="content">
+    <div class="profile-card">
+        <div class="text-center mb-4">
+            <h4>Profile</h4>
+        </div>
+        <form method="post" action="{% url 'profile' %}">
+            {% csrf_token %}
+
+            <!-- Username -->
+            <div class="profile-row">
+                <span class="profile-label">Username</span>
+                <span class="profile-value" id="username-display">
+                    {{ user.username }}
+                    <button type="button" class="edit-btn" onclick="enableEdit('username')">
+                        <i class="fa fa-pen"></i>
+                    </button>
+                </span>
+                <span id="username-edit" style="display:none;">
+                    <input type="text" name="username" value="{{ user.username }}" autocomplete="username" required>
+                    <button type="submit" class="btn btn-sm btn-success ms-2">Save</button>
+                    <button type="button" class="btn btn-sm btn-secondary ms-1" onclick="cancelEdit('username')">Cancel</button>
+                </span>
+            </div>
+
+            <!-- Email -->
+            <div class="profile-row">
+                <span class="profile-label">Email</span>
+                <span class="profile-value" id="email-display">
+                    {{ user.email }}
+                    <button type="button" class="edit-btn" onclick="enableEdit('email')">
+                        <i class="fa fa-pen"></i>
+                    </button>
+                </span>
+                <span id="email-edit" style="display:none;">
+                    <input type="email" name="email" value="{{ user.email }}" required>
+                    <button type="submit" class="btn btn-sm btn-success ms-2">Save</button>
+                    <button type="button" class="btn btn-sm btn-secondary ms-1" onclick="cancelEdit('email')">Cancel</button>
+                </span>
+            </div>
+
+            <!-- Phone -->
+            <div class="profile-row">
+                <span class="profile-label">Phone</span>
+                <span class="profile-value" id="phone-display">
+                    {{ user.userprofile.phone }}
+                    <button type="button" class="edit-btn" onclick="enableEdit('phone')">
+                        <i class="fa fa-pen"></i>
+                    </button>
+                </span>
+                <span id="phone-edit" style="display:none;">
+                    <input type="text" name="phone" value="{{ user.userprofile.phone }}" required>
+                    <button type="submit" class="btn btn-sm btn-success ms-2">Save</button>
+                    <button type="button" class="btn btn-sm btn-secondary ms-1" onclick="cancelEdit('phone')">Cancel</button>
+                </span>
+            </div>
+
+            <!-- Password -->
+            <div class="profile-row">
+                <span class="profile-label">Password</span>
+                <span class="profile-value" id="password-display">
+                    <button type="button" class="edit-btn" onclick="enableEdit('password')">
+                        <i class="fa fa-pen"></i>
+                    </button>
+                </span>
+                <span id="password-edit" style="display:none;">
+                    <input type="password" name="password" placeholder="New password" autocomplete="new-password">
+                    <button type="submit" class="btn btn-sm btn-success ms-2">Save</button>
+                    <button type="button" class="btn btn-sm btn-secondary ms-1" onclick="cancelEdit('password')">Cancel</button>
+                </span>
+            </div>
+
+            <!-- Notifications -->
+            <div class="profile-row">
+                <span class="profile-label">Notifications</span>
+                <span class="profile-value" id="notifications-display">
+                    {% if user.userprofile.notifications == 'all' %}All{% elif user.userprofile.notifications == 'email' %}Email Only{% else %}None{% endif %}
+                    <button type="button" class="edit-btn" onclick="enableEdit('notifications')">
+                        <i class="fa fa-pen"></i>
+                    </button>
+                </span>
+                <span id="notifications-edit" style="display:none;">
+                    <select name="notifications" class="form-select d-inline-block" style="width:auto;">
+                        <option value="all" {% if user.userprofile.notifications == 'all' %}selected{% endif %}>All</option>
+                        <option value="email" {% if user.userprofile.notifications == 'email' %}selected{% endif %}>Email Only</option>
+                        <option value="none" {% if user.userprofile.notifications == 'none' %}selected{% endif %}>None</option>
+                    </select>
+                    <button type="submit" class="btn btn-sm btn-success ms-2">Save</button>
+                    <button type="button" class="btn btn-sm btn-secondary ms-1" onclick="cancelEdit('notifications')">Cancel</button>
+                </span>
+            </div>
+
+            <!-- Language -->
+            <div class="profile-row">
+                <span class="profile-label">Language</span>
+                <span class="profile-value" id="language-display">
+                    {% if user.userprofile.language == 'en' %}English{% elif user.userprofile.language == 'it' %}Italiano{% else %}Other{% endif %}
+                    <button type="button" class="edit-btn" onclick="enableEdit('language')">
+                        <i class="fa fa-pen"></i>
+                    </button>
+                </span>
+                <span id="language-edit" style="display:none;">
+                    <select name="language" class="form-select d-inline-block" style="width:auto;">
+                        <option value="en" {% if user.userprofile.language == 'en' %}selected{% endif %}>English</option>
+                        <option value="it" {% if user.userprofile.language == 'it' %}selected{% endif %}>Italiano</option>
+                    </select>
+                    <button type="submit" class="btn btn-sm btn-success ms-2">Save</button>
+                    <button type="button" class="btn btn-sm btn-secondary ms-1" onclick="cancelEdit('language')">Cancel</button>
+                </span>
+            </div>
+        </form>
+
+        <div class="profile-actions">
+            <!-- Deactivate -->
+            <button type="button" class="btn btn-outline-danger w-100 mt-2" data-bs-toggle="modal" data-bs-target="#deactivateModal">
+                Deactivate Account
+            </button>
+
+            <!-- Delete -->
+            <button type="button" class="btn btn-danger w-100 mt-2" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                Delete Account
+            </button>
+        </div>
+
+        <!-- Deactivate Modal -->
+        <div class="modal fade" id="deactivateModal" tabindex="-1" aria-labelledby="deactivateModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <form method="post" action="{% url 'deactivate_account' %}">
+                        {% csrf_token %}
+                        <div class="modal-header">
+                            <h5 class="modal-title">Confirm Deactivation</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">Are you sure you want to deactivate your account?</div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-danger">Deactivate</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete Modal -->
+        <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <form method="post" action="{% url 'delete_account' %}">
+                        {% csrf_token %}
+                        <div class="modal-header">
+                            <h5 class="modal-title">Confirm Deletion</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">Are you sure you want to <strong>delete</strong> your account? This action cannot be undone.</div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-danger">Delete</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

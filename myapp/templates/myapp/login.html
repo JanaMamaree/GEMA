@@ -1,0 +1,81 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"/>
+    <style>
+        body {
+            display: flex;
+            min-height: 100vh;
+            background-color: #f8f9fa;
+        }
+        .sidebar {
+            width: 250px;
+            background-color: #343a40;
+            padding-top: 2rem;
+            color: white;
+        }
+        .sidebar a {
+            color: white;
+            padding: 1rem;
+            display: block;
+            text-decoration: none;
+        }
+        .sidebar a:hover {
+            background-color: #495057;
+        }
+        .content {
+            flex: 1;
+            padding: 2rem;
+        }
+        .login-card {
+            max-width: 500px;
+            margin: 40px auto;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+            padding: 2rem 2.5rem;
+        }
+        .login-card input,
+        .login-card label {
+            color: #222;
+        }
+        .login-card input {
+            background: #fff;
+        }
+    </style>
+</head>
+<body>
+    <!-- Content -->
+    <div class="content">
+        <div class="login-card">
+            <div class="text-center mb-4">
+                <img src="/static/myapp/GEMA_logo.png" alt="GEMA Logo" style="max-width:200px;max-height:200px;">
+            </div>
+            {% if error %}
+                <div class="alert alert-danger">{{ error }}</div>
+            {% endif %}
+            {% if activated_message %}
+                <div class="alert alert-success">{{ activated_message }}</div>
+            {% endif %}
+            <form method="post" action="{% url 'login' %}">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label for="username" class="form-label">Username</label>
+                    <input type="text" class="form-control" id="username" name="username" required>
+                </div>
+                <div class="mb-3">
+                    <label for="password" class="form-label">Password</label>
+                    <input type="password" class="form-control" id="password" name="password" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Login</button>
+            </form>
+            <div class="text-center mt-3">
+                <span>Don't have an account?</span>
+                <a href="{% url 'register' %}">Register</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
