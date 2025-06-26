@@ -16,7 +16,8 @@ cd ~/deep_learning_camera
 
 (make sure to always check the ip of your local host in the code)
 
-
-
-
-
+----------------------after auto-start boot --------------------------
+sudo systemctl restart main_system.service
+sudo systemctl restart flask_camera.service
+sudo systemctl status main_system.service
+sudo systemctl status flask_camera.service 
