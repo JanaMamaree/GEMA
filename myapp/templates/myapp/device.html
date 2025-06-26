@@ -334,11 +334,14 @@
                 });
                 if (response.ok) {
                     const data = await response.json();
-                    if (data.url) {
-                        cameraModalBody.innerHTML = `<img src="${data.url}" alt="Camera Image" style="max-width:100%; border-radius: 8px;">`;
+                    if (data.image_url) {
+                        const fullUrl = `http://${ip}:5000${data.image_url}`;
+                        cameraModalBody.innerHTML = `<img src="${fullUrl}" alt="Camera Image" style="max-width:100%; border-radius: 8px;">`;
                     } else {
+
                         cameraModalBody.innerHTML = `<div class="text-danger">Failed to get image from device.</div>`;
                     }
+
                 } else {
                     cameraModalBody.innerHTML = `<div class="text-danger">Error fetching camera image.</div>`;
                 }
@@ -362,19 +365,20 @@
             locationModal.show();
 
             try {
-                const response = await fetch(`/get_location/?device_id=${encodeURIComponent(deviceId)}`);
+                const response = await fetch(`/api/get_last_location/${encodeURIComponent(deviceId)}/`);
                 if (response.ok) {
                     const data = await response.json();
-                    if (data.latitude && data.longitude) {
+                    if (data.lat && data.lon) {
                         locationMapContainer.innerHTML = '';
-                        const map = L.map(locationMapContainer).setView([data.latitude, data.longitude], 15);
+                        const map = L.map(locationMapContainer).setView([data.lat, data.lon], 15);
                         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                             maxZoom: 19,
                             attribution: '© OpenStreetMap contributors'
                         }).addTo(map);
-                        L.marker([data.latitude, data.longitude]).addTo(map)
+                        L.marker([data.lat, data.lon]).addTo(map)
                             .bindPopup(`Device: ${deviceId}`).openPopup();
-                    } else {
+                    }
+                    else {
                         locationMapContainer.innerHTML = `<div class="text-danger">Location data unavailable.</div>`;
                     }
                 } else {
