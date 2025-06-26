@@ -1,20 +1,9 @@
-import os
-import sys
-import time
-import cv2
-import requests
-import threading
-import subprocess
-import numpy as np
-import tensorflow as tf
+# === IMPORTS ===
+import os, sys, time, cv2, requests, threading, subprocess
+import numpy as np, tensorflow as tf, lgpio, serial, math, socket
 from queue import Queue
 from tensorflow.keras.applications import VGG16
 from tensorflow.keras.applications.vgg16 import preprocess_input
-import lgpio
-import serial
-import math
-import socket
-import uuid
 
 # === CONFIGURATION ===
 AT_PORT = "/dev/ttyUSB3"
@@ -22,14 +11,17 @@ BAUD_RATE = 115200
 POWER_KEY = 6
 model_path = '/home/Jana/multi_class_model.h5'
 output_dir = "/home/Jana/captured_frames"
+CAMERA_LOCK_FILE = "/tmp/camera.lock"
 class_labels = ['Condizioni Normali', 'Graffiti', 'Rifiuti']
-prediction_api = 'http://192.168.16.1:8000/api/predictions/'
-location_api = 'http://192.168.16.1:8000/api/locations/'
-ip_api = 'http://192.168.16.1:8000/api/device_ip/'
+prediction_api = 'http://192.168.59.1:8000/api/predictions/'
+location_api = 'http://192.168.59.1:8000/api/locations/'
+ip_api = 'http://192.168.59.1:8000/api/device_ip/'
+
+device_id = "device-001"
 shutdown_event = threading.Event()
 frame_queue = Queue()
 
-# === UNIQUE ID & IP ===
+# === IP Address ===
 def get_ip_address():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
@@ -41,27 +33,23 @@ def get_ip_address():
         s.close()
     return ip
 
-device_id = "device-001"
 ip_address = get_ip_address()
 
-# === SETUP DIRECTORIES & MODEL ===
+# === Setup ===
 os.makedirs(output_dir, exist_ok=True)
 print("[INIT] Loading model...")
 model = tf.keras.models.load_model(model_path)
 vgg16 = VGG16(include_top=False, input_shape=(224, 224, 3))
 print("[INIT] Model loaded.")
 
-# === GPS SETUP ===
 ser = serial.Serial(AT_PORT, BAUD_RATE, timeout=1)
 chip = lgpio.gpiochip_open(0)
 lgpio.gpio_claim_output(chip, POWER_KEY)
 latest_gps = {"lat": None, "lon": None}
-
-# === STATE TRACKING ===
 last_sent_prediction = {"label": None, "lat": None, "lon": None}
 last_sent_location = {"lat": None, "lon": None}
 
-# === HAVERSINE DISTANCE ===
+# === Haversine Distance ===
 def haversine(lat1, lon1, lat2, lon2):
     R = 6371000
     phi1, phi2 = math.radians(lat1), math.radians(lat2)
@@ -114,18 +102,25 @@ def parse_gps_coordinates(response):
         print(f"[GPS] Parse error: {e}")
     return None, None
 
-# === IMAGE PREPROCESSING ===
+# === Preprocess image ===
 def preprocess_image(frame, target_size=(224, 224)):
     img_resized = cv2.resize(frame, target_size)
     img_array = tf.keras.preprocessing.image.img_to_array(img_resized)
     img_array = preprocess_input(img_array)
     return np.expand_dims(img_array, axis=0), img_resized
 
-# === THREAD 1: FRAME CAPTURE ===
+# === Check if camera lock is held ===
+def wait_for_camera_unlock():
+    while os.path.exists(CAMERA_LOCK_FILE):
+        print("[WAIT] Camera locked by Flask API...")
+        time.sleep(1)
+
+# === Capture frames ===
 def capture_frames():
     frame_count = 0
     while not shutdown_event.is_set():
-        subprocess.run("libcamera-still -o frame.jpg --width 640 --height 480", shell=True)
+        wait_for_camera_unlock()
+        subprocess.run("libcamera-still -o frame.jpg --width 640 --height 480 -t 1000", shell=True)
         frame = cv2.imread("frame.jpg")
         if frame is not None:
             print(f"[CAMERA] Captured frame {frame_count}")
@@ -137,24 +132,21 @@ def capture_frames():
             print("[CAMERA] Capture failed")
         time.sleep(0.1)
 
-# === THREAD 2: PREDICTION PROCESSING ===
+# === Prediction processing ===
 def process_frames():
     while not shutdown_event.is_set():
         if not frame_queue.empty():
             frame_count, frame = frame_queue.get()
             img_tensor, original_img = preprocess_image(frame)
-
             features = vgg16.predict(img_tensor)
             flattened = features.flatten().reshape(1, -1)
             prediction = model.predict(flattened)
             predicted_label = class_labels[np.argmax(prediction)]
 
-            lat = latest_gps["lat"]
-            lon = latest_gps["lon"]
-
+            lat, lon = latest_gps["lat"], latest_gps["lon"]
             if (
                 last_sent_prediction["label"] == predicted_label and
-                last_sent_prediction["lat"] is not None and
+                last_sent_prediction["lat"] and
                 haversine(lat, lon, last_sent_prediction["lat"], last_sent_prediction["lon"]) < 2
             ):
                 print("[SKIPPED] Same prediction & location.")
@@ -171,10 +163,7 @@ def process_frames():
 
             try:
                 response = requests.post(prediction_api, json=payload)
-                if response.status_code == 201:
-                    print("[API] Prediction sent.")
-                else:
-                    print(f"[API] Failed: {response.status_code}")
+                print("[API] Prediction sent." if response.status_code == 201 else f"[API] Failed: {response.status_code}")
             except Exception as e:
                 print(f"[API] Error: {e}")
 
@@ -185,7 +174,7 @@ def process_frames():
         else:
             time.sleep(0.05)
 
-# === THREAD 3: LOCATION SENDER ===
+# === Location + IP ===
 def send_location_loop():
     while not shutdown_event.is_set():
         lat, lon = latest_gps["lat"], latest_gps["lon"]
@@ -202,18 +191,12 @@ def send_location_loop():
                 }
                 try:
                     response = requests.post(location_api, json=payload)
-                    if response.status_code == 201:
-                        print("[LOCATION] Sent.")
-                        last_sent_location.update({"lat": lat, "lon": lon})
-                    else:
-                        print(f"[LOCATION] Failed: {response.status_code}")
+                    print("[LOCATION] Sent." if response.status_code == 201 else f"[LOCATION] Failed: {response.status_code}")
+                    last_sent_location.update({"lat": lat, "lon": lon})
                 except Exception as e:
                     print(f"[LOCATION] Error: {e}")
-            else:
-                print("[LOCATION] Skipped (within 2m).")
         time.sleep(60)
 
-# === THREAD 4: IP SENDER ===
 def send_ip_loop():
     while not shutdown_event.is_set():
         payload = {
@@ -223,14 +206,10 @@ def send_ip_loop():
         }
         try:
             response = requests.post(ip_api, json=payload)
-            if response.status_code in (200, 201):
-                print("[IP] Sent.")
-            else:
-                print(f"[IP] Failed: {response.status_code}")
+            print("[IP] Sent." if response.status_code in (200, 201) else f"[IP] Failed: {response.status_code}")
         except Exception as e:
             print(f"[IP] Error: {e}")
         time.sleep(60)
-
 
 # === MAIN ===
 if __name__ == "__main__":
@@ -247,14 +226,13 @@ if __name__ == "__main__":
             threading.Thread(target=send_location_loop),
             threading.Thread(target=send_ip_loop)
         ]
-        for t in threads:
-            t.start()
-        for t in threads:
-            t.join()
+        for t in threads: t.start()
+        for t in threads: t.join()
+
     except KeyboardInterrupt:
         print("🛑 Interrupted.")
         shutdown_event.set()
+
     finally:
-        if ser:
-            ser.close()
+        if ser: ser.close()
         lgpio.gpiochip_close(chip)
