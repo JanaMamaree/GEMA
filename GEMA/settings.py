@@ -26,8 +26,11 @@ SECRET_KEY = 'django-insecure-qwldxti^jt6vaenami&jh(^(^!7w6(qs@w=s#fni%o+wm^_jl+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["*"]
-
+#ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = ["gemact.somos.srl"]
+CSRF_TRUSTED_ORIGINS = [
+    "https://gemact.somos.srl",
+]
 
 
 # Application definition
