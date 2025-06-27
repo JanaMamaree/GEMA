@@ -24,10 +24,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-qwldxti^jt6vaenami&jh(^(^!7w6(qs@w=s#fni%o+wm^_jl+'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 #ALLOWED_HOSTS = ["*"]
-ALLOWED_HOSTS = ["gemact.somos.srl"]
+ALLOWED_HOSTS = ["gemact.somos.srl", '127.0.0.1', 'localhost']
 CSRF_TRUSTED_ORIGINS = [
     "https://gemact.somos.srl",
 ]
@@ -52,11 +52,11 @@ INSTALLED_APPS = [
 CELERY_BEAT_SCHEDULE = {
     'device-heartbeat-every-minute': {
         'task': 'myapp.tasks.device_heartbeat_check',
-        'schedule': 10.0,  # every 60 seconds
+        'schedule': 10.0, 
     },
 }
 
-CELERY_TIMEZONE = 'UTC'  # Or your timezone
+CELERY_TIMEZONE = 'UTC'  
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -165,7 +165,7 @@ USE_TZ = True
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-FORCE_SCRIPT_NAME = "/app"
+FORCE_SCRIPT_NAME = "/app" #should be removed 
 STATIC_URL = "/app/static/"
 MEDIA_URL = "/app/media/"
 
