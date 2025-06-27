@@ -162,7 +162,9 @@ USE_TZ = True
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-STATIC_URL = '/static/'
+FORCE_SCRIPT_NAME = "/app"
+STATIC_URL = "/app/static/"
+MEDIA_URL = "/app/media/"
 
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'myapp', 'static'),
