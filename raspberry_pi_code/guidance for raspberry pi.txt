@@ -21,3 +21,6 @@ sudo systemctl restart main_system.service
 sudo systemctl restart flask_camera.service
 sudo systemctl status main_system.service
 sudo systemctl status flask_camera.service 
+
+
+for logs: journalctl -u main_system.service -f

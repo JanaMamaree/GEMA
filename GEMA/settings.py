@@ -27,7 +27,7 @@ SECRET_KEY = 'django-insecure-qwldxti^jt6vaenami&jh(^(^!7w6(qs@w=s#fni%o+wm^_jl+
 DEBUG = False
 
 #ALLOWED_HOSTS = ["*"]
-ALLOWED_HOSTS = ["gemact.somos.srl", '127.0.0.1', 'localhost']
+ALLOWED_HOSTS = ["gemact.somos.srl", '127.0.0.1', 'localhost', '*']
 CSRF_TRUSTED_ORIGINS = [
     "https://gemact.somos.srl",
 ]
@@ -119,13 +119,15 @@ CELERY_IMPORTS = ('myapp.tasks',)
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-        'OPTIONS': {
-            'timeout': 20,  # time in seconds SQLite waits before raising "locked"
-        }
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'gema_db',
+        'USER': 'gema_user',
+        'PASSWORD': '1234',
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
 }
+
 
 
 
