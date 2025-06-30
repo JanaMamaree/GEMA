@@ -120,7 +120,7 @@ def capture_frames():
     frame_count = 0
     while not shutdown_event.is_set():
         wait_for_camera_unlock()
-        subprocess.run("libcamera-still -o frame.jpg --width 640 --height 480 -t 1000", shell=True)
+        subprocess.run("/usr/bin/libcamera-still -o frame.jpg --width 640 --height 480 -t 1000", shell=True)
         frame = cv2.imread("frame.jpg")
         if frame is not None:
             print(f"[CAMERA] Captured frame {frame_count}")
@@ -160,10 +160,10 @@ def process_frames():
                 "longitude": lon,
                 "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
             }
-
+            print("Sending Prediction payload:", payload)
             try:
                 response = requests.post(prediction_api, json=payload)
-                print("[API] Prediction sent." if response.status_code == 201 else f"[API] Failed: {response.status_code}")
+                print("[API] Prediction sent." if response.status_code == 201 else f"[API] Failed: {response.status_code}- {response.text}")
             except Exception as e:
                 print(f"[API] Error: {e}")
 
@@ -189,9 +189,10 @@ def send_location_loop():
                     "longitude": lon,
                     "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
                 }
+                print("Sending location payload:", payload)
                 try:
                     response = requests.post(location_api, json=payload)
-                    print("[LOCATION] Sent." if response.status_code == 201 else f"[LOCATION] Failed: {response.status_code}")
+                    print("[LOCATION] Sent." if response.status_code == 201 else f"[LOCATION] Failed: {response.status_code}- {response.text}")
                     last_sent_location.update({"lat": lat, "lon": lon})
                 except Exception as e:
                     print(f"[LOCATION] Error: {e}")
@@ -204,6 +205,7 @@ def send_ip_loop():
             "ip_address": ip_address,
             "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
         }
+        print("Sending ip payload:", payload)
         try:
             response = requests.post(ip_api, json=payload)
             print("[IP] Sent." if response.status_code in (200, 201) else f"[IP] Failed: {response.status_code}")

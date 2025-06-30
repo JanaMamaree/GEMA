@@ -30,7 +30,7 @@ def capture_image():
         image_filename = f"{device_id}_{timestamp}.jpg"
         image_path = os.path.join(capture_dir, image_filename)
 
-        subprocess.run(['libcamera-still', '-o', image_path, '-t', '1000'], check=True)
+        subprocess.run(['/usr/bin/libcamera-still', '-o', image_path, '-t', '1000'], check=True)
 
         # Unlock camera
         os.remove(LOCK_FILE)
