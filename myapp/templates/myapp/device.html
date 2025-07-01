@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="it">
 <head>
     <link rel="icon" type="image/png" href="/static/myapp/GEMA_logo.png">
     <meta charset="UTF-8" />
@@ -116,22 +116,22 @@
 <body>
     <!-- Sidebar -->
     <div class="sidebar">
-    <div class="text-center mb-3">
-        <img src="/static/myapp/GEMA_logo.png" alt="GEMA Logo" style="max-width:120px;max-height:120px; margin-bottom:10px;">
+        <div class="text-center mb-3">
+            <img src="/static/myapp/GEMA_logo.png" alt="GEMA Logo" style="max-width:120px;max-height:120px; margin-bottom:10px;">
+        </div>
+        <a href="/map/">Mappa</a>
+        <a href="/devices/">Dispositivi</a>
+        <a href="/history/">Cronologia</a>
+        <a href="/profile/">Profilo</a>
+        <button type="button" class="btn btn-outline-secondary w-100 mt-2" data-bs-toggle="modal" data-bs-target="#logoutModal">
+            Esci
+        </button>
+        <hr>
+        <div class="text-center" style="margin-top:16px;">
+            <span style="font-size:0.8em; color:#bbb; vertical-align:middle; margin-right:6px;">powered by</span>
+            <img src="/static/myapp/SOMOS_logo.png" alt="SOMOS Logo" style="max-width:80px; opacity:0.7;">
+        </div>
     </div>
-    <a href="/map/">Mappa</a>
-    <a href="/devices/">Dispositivi</a>
-    <a href="/history/">Cronologia</a>
-    <a href="/profile/">Profilo</a>
-    <button type="button" class="btn btn-outline-secondary w-100 mt-2" data-bs-toggle="modal" data-bs-target="#logoutModal">
-        Esci
-    </button>
-    <hr>
-    <div class="text-center" style="margin-top:16px;">
-        <span style="font-size:0.8em; color:#bbb; vertical-align:middle; margin-right:6px;">powered by</span>
-        <img src="/static/myapp/SOMOS_logo.png" alt="SOMOS Logo" style="max-width:80px; opacity:0.7;">
-    </div>
-</div>
 
     <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -160,7 +160,7 @@
         <div class="header-row">
             <div>ID</div>
             <div>Stato</div>
-            <div>Modealità</div>
+            <div>Modalità</div>
             <div>Ultima attività</div>
             <div>Impostazioni</div>
         </div>
@@ -176,9 +176,7 @@
             <h5 class="modal-title" id="locationModalLabel">Posizione del Dispositivo</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
-          <div class="modal-body" id="locationMapContainer" style="height:250px;">
-            <!-- Map will be injected here -->
-          </div>
+          <div class="modal-body" id="locationMapContainer" style="height:250px;"></div>
         </div>
       </div>
     </div>
@@ -191,9 +189,7 @@
             <h5 class="modal-title" id="cameraModalLabel">Test Fotocamera</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
-          <div class="modal-body" id="cameraModalBody" style="min-height:200px;display:flex;align-items:center;justify-content:center;">
-            <!-- Spinner or image will be injected here -->
-          </div>
+          <div class="modal-body" id="cameraModalBody" style="min-height:200px;display:flex;align-items:center;justify-content:center;"></div>
         </div>
       </div>
     </div>
@@ -201,14 +197,30 @@
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Translations for status and mode
+        function translateStatus(status) {
+            const map = {
+                online: 'Online',
+                offline: 'Offline'
+            };
+            return map[status.toLowerCase()] || status;
+        }
+
+        function translateMode(mode) {
+            const map = {
+                moving: 'In movimento',
+                idle: 'Inattivo'
+            };
+            return map[mode.toLowerCase()] || mode;
+        }
+
         let ws;
 
-        // Render device info rows in the UI
         function renderDevices(devices) {
             const container = document.getElementById('device-container');
             container.innerHTML = '';
             if (!Array.isArray(devices) || devices.length === 0) {
-                container.innerHTML = '<div class="text-center text-muted">No devices found.</div>';
+                container.innerHTML = '<div class="text-center text-muted">Nessun dispositivo trovato.</div>';
                 return;
             }
             devices.forEach(device => {
@@ -216,9 +228,9 @@
                 line.className = 'device-line';
                 line.innerHTML = `
                     <div>${device.device_id}</div>
-                    <div><span class="status-${device.status.toLowerCase()}">${device.status}</span></div>
-                    <div><span class="mode-${device.mode.toLowerCase()}">${device.mode}</span></div>
-                    <div>${device.last_active}</div>
+                    <div><span class="status-${device.status.toLowerCase()}">${translateStatus(device.status)}</span></div>
+                    <div><span class="mode-${device.mode.toLowerCase()}">${translateMode(device.mode)}</span></div>
+                    <div>${device.last_active === 'NOW' ? 'Adesso' : device.last_active}</div>
                     <div>
                         <div class="dropdown">
                             <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -241,7 +253,7 @@
                 `;
                 container.appendChild(line);
             });
-            // Attach event handlers
+
             container.querySelectorAll('.test-camera-btn').forEach(btn => {
                 btn.addEventListener('click', e => {
                     e.preventDefault();
@@ -250,6 +262,7 @@
                     testCamera(deviceId, ip);
                 });
             });
+
             container.querySelectorAll('.get-location-btn').forEach(btn => {
                 btn.addEventListener('click', e => {
                     e.preventDefault();
@@ -257,12 +270,11 @@
                     getLocation(deviceId);
                 });
             });
-            // Initialize dropdowns
+
             const dropdowns = document.querySelectorAll('.dropdown-toggle');
             dropdowns.forEach(el => new bootstrap.Dropdown(el));
         }
 
-        // Load initial devices list via REST API
         async function loadDevices() {
             try {
                 const response = await fetch('/device_status/');
@@ -271,56 +283,35 @@
                     renderDevices(devices);
                 }
             } catch (e) {
-                console.error('Failed to load devices', e);
+                console.error('Errore nel caricamento dei dispositivi', e);
             }
         }
 
-        // Setup WebSocket connection to listen for updates
         function setupWebSocket() {
             let protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
             let wsUrl = `${protocol}://${window.location.host}/ws/device_status/`;
             ws = new WebSocket(wsUrl);
 
-            ws.onopen = () => {
-                console.log('WebSocket connected');
-            };
-
+            ws.onopen = () => console.log('WebSocket connesso');
             ws.onmessage = (event) => {
                 const msg = JSON.parse(event.data);
-                console.log('WebSocket message received:', msg); // DEBUG LINE
-                // Enhanced debug: log type and data separately
-                console.log('msg.type:', msg.type);
-                console.log('msg.data:', msg.data);
-                console.log('typeof msg.data:', typeof msg.data, 'Array.isArray:', Array.isArray(msg.data));
-                // Expecting backend to send { type: 'device.status', data: [...] }
-                if (msg.type === 'device.status') {
-                    if (Array.isArray(msg.data)) {
-                        renderDevices(msg.data);
-                    } else {
-                        console.warn('msg.data is not an array:', msg.data);
-                    }
+                if (msg.type === 'device.status' && Array.isArray(msg.data)) {
+                    renderDevices(msg.data);
                 }
             };
-
             ws.onclose = () => {
-                console.log('WebSocket closed, retrying in 3s...');
+                console.log('WebSocket chiuso, riconnessione tra 3s...');
                 setTimeout(setupWebSocket, 3000);
             };
-
-            ws.onerror = (e) => {
-                console.error('WebSocket error', e);
-            };
+            ws.onerror = (e) => console.error('WebSocket errore', e);
         }
 
-        // Camera test modal and request
         async function testCamera(deviceId, ip) {
             const cameraModalBody = document.getElementById('cameraModalBody');
             cameraModalBody.innerHTML = `
                 <div class="text-center w-100">
-                    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
-                      <span class="visually-hidden">Processing...</span>
-                    </div>
-                    <div class="mt-2">Processing...</div>
+                    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+                    <div class="mt-2">Elaborazione...</div>
                 </div>
             `;
             const cameraModal = new bootstrap.Modal(document.getElementById('cameraModal'));
@@ -338,27 +329,22 @@
                         const fullUrl = `http://${ip}:5000${data.image_url}`;
                         cameraModalBody.innerHTML = `<img src="${fullUrl}" alt="Camera Image" style="max-width:100%; border-radius: 8px;">`;
                     } else {
-
-                        cameraModalBody.innerHTML = `<div class="text-danger">Failed to get image from device.</div>`;
+                        cameraModalBody.innerHTML = `<div class="text-danger">Impossibile ottenere immagine dal dispositivo.</div>`;
                     }
-
                 } else {
-                    cameraModalBody.innerHTML = `<div class="text-danger">Error fetching camera image.</div>`;
+                    cameraModalBody.innerHTML = `<div class="text-danger">Errore durante il recupero dell'immagine.</div>`;
                 }
             } catch (e) {
-                cameraModalBody.innerHTML = `<div class="text-danger">Error: ${e.message}</div>`;
+                cameraModalBody.innerHTML = `<div class="text-danger">Errore: ${e.message}</div>`;
             }
         }
 
-        // Location modal with map
         async function getLocation(deviceId) {
             const locationMapContainer = document.getElementById('locationMapContainer');
             locationMapContainer.innerHTML = `
                 <div class="text-center w-100">
-                    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
-                      <span class="visually-hidden">Loading...</span>
-                    </div>
-                    <div class="mt-2">Loading location...</div>
+                    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+                    <div class="mt-2">Caricamento posizione...</div>
                 </div>
             `;
             const locationModal = new bootstrap.Modal(document.getElementById('locationModal'));
@@ -376,27 +362,25 @@
                             attribution: '© OpenStreetMap contributors'
                         }).addTo(map);
                         L.marker([data.lat, data.lon]).addTo(map)
-                            .bindPopup(`Device: ${deviceId}`).openPopup();
-                    }
-                    else {
-                        locationMapContainer.innerHTML = `<div class="text-danger">Location data unavailable.</div>`;
+                            .bindPopup(`Dispositivo: ${deviceId}`).openPopup();
+                    } else {
+                        locationMapContainer.innerHTML = `<div class="text-danger">Posizione non disponibile.</div>`;
                     }
                 } else {
-                    locationMapContainer.innerHTML = `<div class="text-danger">Failed to fetch location.</div>`;
+                    locationMapContainer.innerHTML = `<div class="text-danger">Errore nel recupero della posizione.</div>`;
                 }
             } catch (e) {
-                locationMapContainer.innerHTML = `<div class="text-danger">Error: ${e.message}</div>`;
+                locationMapContainer.innerHTML = `<div class="text-danger">Errore: ${e.message}</div>`;
             }
         }
 
-        // On page load: load devices and start websocket
         window.addEventListener('load', () => {
             loadDevices();
             setupWebSocket();
         });
     </script>
 
-    <!-- Leaflet CSS and JS for map in location modal -->
+    <!-- Leaflet CSS and JS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </body>
