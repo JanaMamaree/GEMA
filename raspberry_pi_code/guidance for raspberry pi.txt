@@ -24,3 +24,335 @@ sudo systemctl status flask_camera.service
 
 
 for logs: journalctl -u main_system.service -f
+
+------------------------------------------------------------------------------
+sudo nano /etc/systemd/system/main_system.service --> for final_code4
+
+[Unit]
+Description=Main Deep Learning Camera System
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/home/Jana/deep_learning_camera/venv/bin/python /home/Jana/deep_learning_camera/final_code4.py
+WorkingDirectory=/home/Jana/deep_learning_camera
+Restart=always
+User=Jana
+Environment="PATH=/home/Jana/deep_learning_camera/venv/bin"
+
+[Install]
+WantedBy=multi-user.target
+----------------------------------------------------------------------------
+sudo nano /etc/systemd/system/flask_camera.service --> for test_camera1
+
+[Unit]
+Description=Flask Camera API
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/home/Jana/deep_learning_camera/venv/bin/python /home/Jana/deep_learning_camera/test_camera1.py
+WorkingDirectory=/home/Jana/deep_learning_camera
+Restart=always
+User=Jana
+Environment="PATH=/home/Jana/deep_learning_camera/venv/bin"
+
+[Install]
+WantedBy=multi-user.target
+
+------------------------------------------------------------------------
+                          /usr/local/bin/undervoltage_watchdog.sh                                     
+						  
+#!/bin/bash
+# Get throttled status
+STATUS=$(vcgencmd get_throttled)
+
+# Log file
+LOGFILE="/var/log/undervoltage_watchdog.log"
+
+# Known undervoltage states
+CRITICAL_CODES=("0x1" "0x50000" "0x50005" "0x50001")
+
+# Parse value
+CODE=$(echo $STATUS | cut -d= -f2)
+
+# Check if in critical list
+for val in "${CRITICAL_CODES[@]}"; do
+    if [[ "$CODE" == "$val" ]]; then
+        echo "$(date) ⚠️ Detected undervoltage ($CODE). Rebooting..." >> "$LOGFILE"
+        sudo reboot
+    fi
+done
+-------------------------------------------------------
+ sudo nano /usr/local/bin/network_watchdog.sh
+ ------------------------------------------------------
+                   /tmp/crontab.he93DG/crontab                                            
+
+# Edit this file to introduce tasks to be run by cron.
+#
+# Each task to run has to be defined through a single line
+# indicating with different fields when the task will be run
+# and what command to run for the task
+#
+# To define the time you can provide concrete values for
+# minute (m), hour (h), day of month (dom), month (mon),
+# and day of week (dow) or use '*' in these fields (for 'any').
+#
+# Notice that tasks will be started based on the cron's system
+# daemon's notion of time and timezones.
+#
+# Output of the crontab jobs (including errors) is sent through
+# email to the user the crontab file belongs to (unless redirected).
+#
+# For example, you can run a backup of all your user accounts
+# at 5 a.m every week with:
+# 0 5 * * 1 tar -zcf /var/backups/home.tgz /home/
+#
+# For more information see the manual pages of crontab(5) and cron(8)
+#
+# m h  dom mon dow   command
+* * * * * /usr/local/bin/undervoltage_watchdog.sh
+---------------------------------------------------------------
+                cat /boot/firmware/config.txt
+
+# For more options and information see
+# http://rptl.io/configtxt
+# Some settings may impact device functionality. See link above for details
+
+# Uncomment some or all of these to enable the optional hardware interfaces
+dtparam=i2c_arm=on
+#dtparam=i2s=on
+dtparam=spi=on
+
+# Enable audio (loads snd_bcm2835)
+dtparam=audio=on
+
+# Automatically load overlays for detected cameras
+camera_auto_detect=1
+
+# OPTIONAL: Force specific camera module (uncomment one if needed)
+#dtoverlay=imx219    # For Camera Module 2
+#dtoverlay=imx708    # For Camera Module 3
+
+# Automatically load overlays for detected DSI displays
+display_auto_detect=1
+
+# Automatically load initramfs files, if found
+auto_initramfs=1
+
+# Enable DRM VC4 V3D driver
+dtoverlay=vc4-kms-v3d
+max_framebuffers=2
+
+# Don't have the firmware create an initial video= setting in cmdline.txt.
+# Use the kernel's default instead.
+disable_fw_kms_setup=1
+
+# Run in 64-bit mode
+arm_64bit=1
+
+# Disable compensation for displays with overscan
+disable_overscan=1
+
+# Run as fast as firmware / board allows
+arm_boost=1
+
+[cm4]
+# Enable host mode on the 2711 built-in XHCI USB controller.
+otg_mode=1
+
+[cm5]
+dtoverlay=dwc2,dr_mode=host
+
+[all]
+dtparam=watchdog=on
+-------------------------------------------------------------------
+						cat /etc/watchdog.conf
+# ====================================================================
+# Configuration for the watchdog daemon. For more information on the
+# parameters in this file use the command 'man watchdog.conf'
+# ====================================================================
+
+# =================== The hardware timer settings ====================
+#
+# For this daemon to be effective it really needs some hardware timer
+# to back up any reboot actions. If you have a server then see if it
+# has IPMI support. Otherwise for Intel-based machines try the iTCO_wdt
+# module, otherwise (or if that fails) then see if any of the following
+# module load and work:
+#
+# it87_wdt it8712f_wdt w83627hf_wdt w83877f_wdt w83977f_wdt
+#
+# If all else fails then 'softdog' is better than no timer at all!
+# Or work your way through the modules listed under:
+#
+# /lib/modules/`uname -r`/kernel/drivers/watchdog/
+#
+# To see if they load, present /dev/watchdog, and are capable of
+# resetting the system on time-out.
+
+# Uncomment this to use the watchdog device driver access "file".
+
+watchdog-device         = /dev/watchdog
+
+# Uncomment and edit this line for hardware timeout values that differ
+# from the default of one minute.
+
+#watchdog-timeout       = 60
+
+# If your watchdog trips by itself when the first timeout interval
+# elapses then try uncommenting the line below and changing the
+# value to 'yes'.
+
+#watchdog-refresh-use-settimeout        = auto
+
+# If you have a buggy watchdog device (e.g. some IPMI implementations)
+# try uncommenting this line and setting it to 'yes'.
+
+#watchdog-refresh-ignore-errors = no
+
+# ====================== Other system settings ========================
+#
+# Interval between tests. Should be a couple of seconds shorter than
+# the hardware time-out value.
+
+#interval               = 1
+
+# The number of intervals skipped before a log message is written (i.e.
+# a multiplier for 'interval' in terms of syslog messages)
+
+#logtick        = 1
+
+# Directory for log files (probably best not to change this)
+
+#log-dir                = /var/log/watchdog
+
+# Email address for sending the reboot reason. This needs sendmail to
+# be installed and properly configured. Maybe you should just enable
+# syslog forwarding instead?
+
+#admin                  = root
+
+# Lock the daemon in to memory as a real-time process. This greatly
+# decreases the chance that watchdog won't be scheduled before your
+# machine is really loaded.
+
+realtime                = yes
+priority                = 1
+
+# ====================== How to handle errors  =======================
+#
+# If you have a custom binary/script to handle errors then uncomment
+# this line and provide the path. For 'v1' test binary files they also
+# handle error cases.
+
+#repair-binary          = /usr/sbin/repair
+#repair-timeout         = 60
+
+# The retry-timeout and repair limit are used to handle errors in a
+# more robust manner. Errors must persist for longer than this to
+# action a repair or reboot, and if repair-maximum attempts are
+# made without the test passing a reboot is initiated anyway.
+
+#retry-timeout          = 60
+#repair-maximum         = 1
+
+# Configure the delay on reboot from sending SIGTERM to all processes
+# and to following up with SIGKILL for any that are ignoring the polite
+# request to stop.
+
+#sigterm-delay          = 5
+
+# ====================== User-specified tests ========================
+#
+# Specify the directory for auto-added 'v1' test programs (any executable
+# found in the 'test-directory should be listed).
+
+#test-directory = /etc/watchdog.d
+
+# Specify any v0 custom tests here. Multiple lines are permitted, but
+# having any 'v1' programs/scripts discovered in the 'test-directory' is
+# the better way.
+
+#test-binary            =
+
+# Specify the time-out value for a test error to be reported.
+
+#test-timeout           = 60
+
+# ====================== Typical tests ===============================
+#
+# Specify any IPv4 numeric addresses to be probed.
+# NOTE: You should check you have permission to ping any machine before
+# using it as a test. Also remember if the target goes down then this
+# machine will reboot as a result!
+
+#ping                   = 172.16.0.1
+#ping                   = 192.168.1.1
+
+# Set the number of ping attempts in each 'interval' of time. Default
+# is 3 and it completes on the first successful ping.
+# NOTE: Round-trip delay has to be less than 'interval' / 'ping-count'
+# for test success, but this is unlikely to be exceeded except possibly
+# on satellite links (very unlikely case!).
+
+#ping-count             = 3
+
+# Specify any network interface to be checked for activity.
+
+#interface              = eth0
+
+# Specify any files to be checked for presence, and if desired, checked
+# that they have been updated more recently than 'change' seconds.
+
+#file                   = /var/log/syslog
+#change                 = 1407
+
+# Uncomment to enable load average tests for 1, 5 and 15 minute
+# averages. Setting one of these values to '0' disables it. These
+# values will hopefully never reboot your machine during normal use
+# (if your machine is really hung, the loadavg will go much higher
+# than 25 in most cases).
+
+#max-load-1             = 24
+#max-load-5             = 18
+#max-load-15            = 12
+
+# Check available memory on the machine.
+#
+# The min-memory check is a passive test from reading the file
+# /proc/meminfo and computed from MemFree + Buffers + Cached
+# If this is below a few tens of MB you are likely to have problems.
+#
+# The allocatable-memory is an active test checking it can be paged
+# in to use.
+#
+# Maximum swap should be based on normal use, probably a large part of
+# available swap but paging 1GB of swap can take tens of seconds.
+#
+# NOTE: This is the number of pages, to get the real size, check how
+# large the pagesize is on your machine (typically 4kB for x86 hardware).
+
+#min-memory             = 1
+#allocatable-memory     = 1
+#max-swap = 0
+
+# Check for over-temperature. Typically the temperature-sensor is a
+# 'virtual file' under /sys and it contains the temperature in
+# milli-Celsius. Usually these are generated by the 'sensors' package,
+# but take care as device enumeration may not be fixed.
+
+#temperature-sensor     =
+#max-temperature        = 90
+
+# Check for a running process/daemon by its PID file. For example,
+# check if rsyslogd is still running by enabling the following line:
+
+#pidfile                = /var/run/rsyslogd.pid
+
+interval = 10
+file = /home/Jana/watchdog-test
+change = 60
+
+interface = wlan0
+-----------------------------------------------------------------------------

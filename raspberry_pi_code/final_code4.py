@@ -1,6 +1,6 @@
 # === IMPORTS ===
 import os, sys, time, cv2, requests, threading, subprocess
-import numpy as np, tensorflow as tf, lgpio, serial, math, socket
+import numpy as np, tensorflow as tf, lgpio, serial, math, socket, platform
 from queue import Queue
 from tensorflow.keras.applications import VGG16
 from tensorflow.keras.applications.vgg16 import preprocess_input
@@ -12,6 +12,7 @@ POWER_KEY = 6
 model_path = '/home/Jana/multi_class_model.h5'
 output_dir = "/home/Jana/captured_frames"
 CAMERA_LOCK_FILE = "/tmp/camera.lock"
+WATCHDOG_FILE = "/home/Jana/watchdog-test"
 class_labels = ['Condizioni Normali', 'Graffiti', 'Rifiuti']
 prediction_api = 'http://192.168.59.1:8000/api/predictions/'
 location_api = 'http://192.168.59.1:8000/api/locations/'
@@ -71,7 +72,7 @@ def send_at(command, expected="OK", timeout=2):
     ser.write((command + '\r\n').encode())
     time.sleep(timeout)
     reply = ser.read(ser.inWaiting()).decode(errors='ignore')
-    print(f"📡 Sent: {command}\n🧾 Response: {reply.strip()}")
+    print(f"📡 Sent: {command}\n📟 Response: {reply.strip()}")
     return expected in reply, reply
 
 def wait_for_fixed_gps():
@@ -199,6 +200,7 @@ def send_location_loop():
         time.sleep(60)
 
 def send_ip_loop():
+    failure_count = 0
     while not shutdown_event.is_set():
         payload = {
             "device_id": device_id,
@@ -207,11 +209,73 @@ def send_ip_loop():
         }
         print("Sending ip payload:", payload)
         try:
-            response = requests.post(ip_api, json=payload)
-            print("[IP] Sent." if response.status_code in (200, 201) else f"[IP] Failed: {response.status_code}")
+            response = requests.post(ip_api, json=payload, timeout=10)
+            if response.status_code in (200, 201):
+                print("[IP] Sent.")
+                failure_count = 0
+            else:
+                print(f"[IP] Failed: {response.status_code}")
+                failure_count += 1
         except Exception as e:
             print(f"[IP] Error: {e}")
+            failure_count += 1
+
+        if failure_count >= 3:
+            print("🚨 Network down. Rebooting in 5 seconds...")
+            time.sleep(5)
+            os.system("sudo reboot")
+
         time.sleep(60)
+
+# === PING MONITORING THREAD ===
+def ping_ip_loop(ip, interval=5, max_failures=3):
+    fail_count = 0
+    while not shutdown_event.is_set():
+        param = "-n" if platform.system().lower() == "windows" else "-c"
+        command = ["/usr/bin/ping", param, "1", ip]
+        try:
+            result = subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            if result.returncode == 0:
+                fail_count = 0
+            else:
+                fail_count += 1
+                print(f"[PING] No response from {ip} (fail {fail_count}/{max_failures})")
+        except Exception as e:
+            print(f"[PING] Exception: {e}")
+            fail_count += 1
+
+        if fail_count >= max_failures:
+            print(f"[PING] {ip} unreachable {fail_count} times. Rebooting system.")
+            subprocess.run(["sudo", "reboot"])
+            break
+
+        time.sleep(interval)
+
+# === WATCHDOG HEARTBEAT ===
+def watchdog_heartbeat():
+    print(f"[WATCHDOG] Monitoring with file: {WATCHDOG_FILE}")
+    while not shutdown_event.is_set():
+        try:
+            with open(WATCHDOG_FILE, "w") as f:
+                f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - alive\n")
+            print(f"[{time.strftime('%H:%M:%S')}] Watchdog heartbeat written to {WATCHDOG_FILE}")
+        except Exception as e:
+            print(f"[WATCHDOG] Error: {e}")
+        time.sleep(30)
+
+def hardware_watchdog_kick():
+    try:
+        print("[HW WATCHDOG] Starting hardware watchdog kick thread...")
+        with open('/dev/watchdog', 'w') as wd:
+            print("[HW WATCHDOG] /dev/watchdog opened successfully.")
+            while not shutdown_event.is_set():
+                wd.write('\n')  # Kick the watchdog
+                wd.flush()
+                time.sleep(10)
+        print("[HW WATCHDOG] Watchdog thread ending.")
+    except Exception as e:
+        print(f"[HW WATCHDOG] Error: {e}")
+
 
 # === MAIN ===
 if __name__ == "__main__":
@@ -226,15 +290,20 @@ if __name__ == "__main__":
             threading.Thread(target=capture_frames),
             threading.Thread(target=process_frames),
             threading.Thread(target=send_location_loop),
-            threading.Thread(target=send_ip_loop)
+            threading.Thread(target=send_ip_loop),
+            threading.Thread(target=watchdog_heartbeat),
+            threading.Thread(target=hardware_watchdog_kick)  # <-- new watchdog kick thread
         ]
-        for t in threads: t.start()
-        for t in threads: t.join()
+
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
 
     except KeyboardInterrupt:
-        print("🛑 Interrupted.")
+        print("🚫 Interrupted.")
         shutdown_event.set()
 
     finally:
-        if ser: ser.close()
-        lgpio.gpiochip_close(chip)
+        if ser:
+            ser.close()
