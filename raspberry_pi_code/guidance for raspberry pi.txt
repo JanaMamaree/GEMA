@@ -16,7 +16,7 @@ cd ~/deep_learning_camera
 
 (make sure to always check the ip of your local host in the code)
 
-----------------------after auto-start boot --------------------------
+----------------------after auto-start boot --------------------------------------------------------
 sudo systemctl restart main_system.service
 sudo systemctl restart flask_camera.service
 sudo systemctl status main_system.service
@@ -24,8 +24,10 @@ sudo systemctl status flask_camera.service
 
 
 for logs: journalctl -u main_system.service -f
+           tail -f /var/log/network_watchdog.log
+           tail -f /var/log/undervoltage_watchdog.log
 
-------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------
 sudo nano /etc/systemd/system/main_system.service --> for final_code4
 
 [Unit]
@@ -42,7 +44,7 @@ Environment="PATH=/home/Jana/deep_learning_camera/venv/bin"
 
 [Install]
 WantedBy=multi-user.target
-----------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------
 sudo nano /etc/systemd/system/flask_camera.service --> for test_camera1
 
 [Unit]
@@ -60,7 +62,7 @@ Environment="PATH=/home/Jana/deep_learning_camera/venv/bin"
 [Install]
 WantedBy=multi-user.target
 
-------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------
                           /usr/local/bin/undervoltage_watchdog.sh                                     
 						  
 #!/bin/bash
@@ -83,10 +85,43 @@ for val in "${CRITICAL_CODES[@]}"; do
         sudo reboot
     fi
 done
--------------------------------------------------------
- sudo nano /usr/local/bin/network_watchdog.sh
- ------------------------------------------------------
-                   /tmp/crontab.he93DG/crontab                                            
+----------------------------------------------------------------------------------------------------------------------
+            sudo nano /usr/local/bin/network_watchdog.sh
+
+#!/bin/bash
+
+LOGFILE="/var/log/network_watchdog.log"
+PING_IP="8.8.8.8"
+
+# Check wlan0 interface is UP and has IP
+wlan_up=$(ip link show wlan0 | grep -c "state UP")
+wlan_ip=$(ip -4 addr show wlan0 | grep -c "inet ")
+
+# Ping test
+ping_ok=0
+if ping -c 2 -W 2 $PING_IP > /dev/null; then
+    ping_ok=1
+fi
+
+# Decision logic
+if [[ $wlan_up -eq 0 || $wlan_ip -eq 0 ]]; then
+    # wlan0 is down or no IP
+    if [[ $ping_ok -eq 0 ]]; then
+        echo "$(date) wlan0 DOWN or no IP AND ping failed -> Rebooting..." >> $LOGFILE
+        sudo reboot
+    else
+        echo "$(date) wlan0 DOWN or no IP but ping OK -> Check network, no reboot" >> $LOGFILE
+    fi
+else
+    # wlan0 is UP with IP
+    if [[ $ping_ok -eq 0 ]]; then
+        echo "$(date) wlan0 UP with IP but ping failed -> No reboot, just log" >> $LOGFILE
+    else
+        echo "$(date) wlan0 UP with IP and ping OK -> All good" >> $LOGFILE
+    fi
+fi
+ -----------------------------------------------------------------------------------------------------------------------
+                   sudo crontab -e                                          
 
 # Edit this file to introduce tasks to be run by cron.
 #
@@ -112,7 +147,7 @@ done
 #
 # m h  dom mon dow   command
 * * * * * /usr/local/bin/undervoltage_watchdog.sh
----------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------
                 cat /boot/firmware/config.txt
 
 # For more options and information see
@@ -355,4 +390,4 @@ file = /home/Jana/watchdog-test
 change = 60
 
 interface = wlan0
------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------
